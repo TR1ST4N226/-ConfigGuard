@@ -25,12 +25,12 @@ const (
 
 // SSHOptions configures a read-only SSH snapshot.
 type SSHOptions struct {
-	Host       string
-	User       string
-	KeyPath    string
-	KnownHosts string
-	Command    string
-	Platform   Platform
+	Host       string   `yaml:"host"`
+	User       string   `yaml:"user"`
+	KeyPath    string   `yaml:"key"`
+	KnownHosts string   `yaml:"known_hosts"`
+	Command    string   `yaml:"command"`
+	Platform   Platform `yaml:"platform"`
 }
 
 // Write stores a collected configuration as one normalized line per entry.

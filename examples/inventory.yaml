@@ -1,0 +1,9 @@
+devices:
+  - name: switch-01
+    source: ssh
+    platform: cisco-ios
+    ssh:
+      host: 192.0.2.10:22
+      user: admin
+      key: ./.ssh/id_ed25519
+      known_hosts: ./.ssh/known_hosts

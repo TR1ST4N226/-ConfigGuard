@@ -8,6 +8,7 @@ import (
 
 	"github.com/TR1ST4N226/ConfigGuard/internal/collector"
 	"github.com/TR1ST4N226/ConfigGuard/internal/config"
+	"github.com/TR1ST4N226/ConfigGuard/internal/inventory"
 	"github.com/TR1ST4N226/ConfigGuard/internal/report"
 	"github.com/TR1ST4N226/ConfigGuard/internal/rules"
 )
@@ -29,6 +30,20 @@ func main() {
 		if err := runSnapshot(os.Args[2:]); err != nil {
 			fmt.Fprintf(os.Stderr, "configguard: %v\n", err)
 			os.Exit(1)
+		}
+	case "list":
+		if err := runList(os.Args[2:]); err != nil {
+			fmt.Fprintf(os.Stderr, "configguard: %v\n", err)
+			os.Exit(1)
+		}
+	case "audit":
+		result, err := runAudit(os.Args[2:])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "configguard: %v\n", err)
+			os.Exit(1)
+		}
+		if result {
+			os.Exit(4)
 		}
 	case "diff":
 		drift, err := runDiff(os.Args[2:])
@@ -55,6 +70,119 @@ func main() {
 		printUsage()
 		os.Exit(2)
 	}
+}
+
+func runList(args []string) error {
+	flags := flag.NewFlagSet("list", flag.ContinueOnError)
+	flags.SetOutput(os.Stderr)
+
+	inventoryPath := flags.String("inventory", "", "path to a YAML inventory")
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	if *inventoryPath == "" {
+		return fmt.Errorf("--inventory is required")
+	}
+
+	devices, err := inventory.LoadFile(*inventoryPath)
+	if err != nil {
+		return err
+	}
+	for _, device := range devices {
+		fmt.Printf("%s\t%s\t%s\n", device.Name, device.Source, device.Platform)
+	}
+	return nil
+}
+
+func runAudit(args []string) (bool, error) {
+	flags := flag.NewFlagSet("audit", flag.ContinueOnError)
+	flags.SetOutput(os.Stderr)
+
+	inventoryPath := flags.String("inventory", "", "path to a YAML inventory")
+	deviceName := flags.String("device", "", "device name from the inventory")
+	desiredPath := flags.String("desired", "", "path to the expected configuration")
+	outputPath := flags.String("output", "", "path for the collected snapshot")
+	rulesPath := flags.String("rules", "", "path to a custom YAML rules file")
+	reportFormat := flags.String("report-format", "text", "report format: text, json or sarif")
+	reportPath := flags.String("report-output", "", "path for a JSON or SARIF report")
+	if err := flags.Parse(args); err != nil {
+		return false, err
+	}
+	if *inventoryPath == "" || *deviceName == "" || *desiredPath == "" || *outputPath == "" {
+		return false, fmt.Errorf("--inventory, --device, --desired and --output are required")
+	}
+
+	devices, err := inventory.LoadFile(*inventoryPath)
+	if err != nil {
+		return false, err
+	}
+	device, err := inventory.Find(devices, *deviceName)
+	if err != nil {
+		return false, err
+	}
+	lines, err := collector.CollectFromSource(context.Background(), device.Source, device.SSH)
+	if err != nil {
+		return false, fmt.Errorf("collect snapshot: %w", err)
+	}
+	if err := collector.Write(*outputPath, lines); err != nil {
+		return false, fmt.Errorf("write snapshot: %w", err)
+	}
+
+	desired, err := config.ReadFile(*desiredPath)
+	if err != nil {
+		return false, fmt.Errorf("read desired configuration: %w", err)
+	}
+	actual, err := config.ReadFile(*outputPath)
+	if err != nil {
+		return false, fmt.Errorf("read snapshot: %w", err)
+	}
+
+	missing, unexpected := config.Compare(desired, actual)
+	if len(missing) > 0 || len(unexpected) > 0 {
+		fmt.Println("DRIFT: configuration differs")
+		for _, line := range missing {
+			fmt.Printf("- %s\n", line)
+		}
+		for _, line := range unexpected {
+			fmt.Printf("+ %s\n", line)
+		}
+		return true, nil
+	}
+
+	configuredRules := rules.Default()
+	if *rulesPath != "" {
+		configuredRules, err = rules.LoadFile(*rulesPath)
+		if err != nil {
+			return false, fmt.Errorf("load rules: %w", err)
+		}
+	}
+	failed := rules.Evaluate(actual, configuredRules)
+	if *reportFormat != "text" && *reportPath == "" {
+		return false, fmt.Errorf("--report-output is required for %s reports", *reportFormat)
+	}
+	result := report.FromRules(failed)
+	switch *reportFormat {
+	case "text":
+	case "json":
+		if err := report.WriteJSON(*reportPath, result); err != nil {
+			return false, err
+		}
+	case "sarif":
+		if err := report.WriteSARIF(*reportPath, result); err != nil {
+			return false, err
+		}
+	default:
+		return false, fmt.Errorf("unsupported report format %q", *reportFormat)
+	}
+	if len(failed) > 0 {
+		fmt.Printf("NON-COMPLIANT: %d rule(s) failed\n", len(failed))
+		for _, rule := range failed {
+			fmt.Printf("- %s [%s] %s\n", rule.ID, rule.Severity, rule.Description)
+		}
+		return true, nil
+	}
+	fmt.Println("COMPLIANT: audit passed")
+	return false, nil
 }
 
 func runCheck(args []string) (bool, error) {
@@ -123,6 +251,8 @@ func runSnapshot(args []string) error {
 
 	source := flags.String("source", string(collector.SourceLocal), "snapshot source: local or ssh")
 	outputPath := flags.String("output", "", "path for the collected configuration")
+	inventoryPath := flags.String("inventory", "", "path to a YAML inventory")
+	deviceName := flags.String("device", "", "device name from the inventory")
 	sshHost := flags.String("ssh-host", "", "SSH host and port, for example 192.0.2.10:22")
 	sshUser := flags.String("ssh-user", "", "SSH username")
 	sshKey := flags.String("ssh-key", "", "path to an SSH private key")
@@ -137,23 +267,41 @@ func runSnapshot(args []string) error {
 	}
 
 	sourceType := collector.Source(*source)
-	if err := collector.ValidateSource(sourceType); err != nil {
-		return err
-	}
 	targetPlatform := collector.Platform(*platform)
-	if err := collector.ValidatePlatform(targetPlatform); err != nil {
-		return err
-	}
-	// La collecte est en lecture seule : elle récupère l'état et écrit un snapshot local.
-	// Collection is read-only: it gathers state and writes a local snapshot.
-	lines, err := collector.CollectFromSource(context.Background(), sourceType, collector.SSHOptions{
+	options := collector.SSHOptions{
 		Host:       *sshHost,
 		User:       *sshUser,
 		KeyPath:    *sshKey,
 		KnownHosts: *sshKnownHosts,
 		Command:    *sshCommand,
 		Platform:   targetPlatform,
-	})
+	}
+	if *inventoryPath != "" || *deviceName != "" {
+		if *inventoryPath == "" || *deviceName == "" {
+			return fmt.Errorf("--inventory and --device must be used together")
+		}
+		devices, err := inventory.LoadFile(*inventoryPath)
+		if err != nil {
+			return err
+		}
+		device, err := inventory.Find(devices, *deviceName)
+		if err != nil {
+			return err
+		}
+		sourceType = device.Source
+		targetPlatform = device.Platform
+		options = device.SSH
+		options.Platform = targetPlatform
+	}
+	if err := collector.ValidateSource(sourceType); err != nil {
+		return err
+	}
+	if err := collector.ValidatePlatform(targetPlatform); err != nil {
+		return err
+	}
+	// La collecte est en lecture seule : elle récupère l'état et écrit un snapshot local.
+	// Collection is read-only: it gathers state and writes a local snapshot.
+	lines, err := collector.CollectFromSource(context.Background(), sourceType, options)
 	if err != nil {
 		return err
 	}
@@ -209,7 +357,10 @@ func printUsage() {
 
 Usage:
   configguard version
+  configguard list --inventory inventory.yaml
+  configguard audit --inventory inventory.yaml --device switch-01 --desired expected.conf --output actual.conf
   configguard snapshot --output actual.conf
+  configguard snapshot --inventory inventory.yaml --device switch-01 --output actual.conf
   configguard snapshot --source ssh --platform cisco-ios --ssh-host 192.0.2.10:22 --ssh-user admin --ssh-key .\id_ed25519 --ssh-known-hosts .\known_hosts --output actual.conf
   configguard diff --desired expected.conf --actual current.conf
   configguard check --config current.conf`)

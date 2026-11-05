@@ -57,6 +57,29 @@ Pour Cisco IOS, ajoutez `--platform cisco-ios`. Le profil utilise des commandes 
 go run . snapshot --source ssh --platform cisco-ios --ssh-host 192.0.2.10:22 --ssh-user admin --ssh-key .\id_ed25519 --ssh-known-hosts .\known_hosts --output .\examples\cisco-actual.conf
 ```
 
+Pour éviter de répéter les paramètres SSH, utilisez un inventaire YAML :
+
+```powershell
+go run . snapshot --inventory .\examples\inventory.yaml --device switch-01 --output .\examples\cisco-actual.conf
+```
+
+Les chemins relatifs de `key` et `known_hosts` sont résolus depuis le dossier de l'inventaire.
+Pour afficher les équipements sans exposer les paramètres SSH :
+
+```powershell
+go run . list --inventory .\examples\inventory.yaml
+```
+
+Pour exécuter collecte, comparaison et conformité en une commande :
+
+```powershell
+go run . audit `
+  --inventory .\examples\inventory.yaml `
+  --device switch-01 `
+  --desired .\examples\desired.conf `
+  --output .\examples\actual.conf
+```
+
 ### Codes de sortie
 
 - `0` : configuration conforme
@@ -113,6 +136,29 @@ For Cisco IOS, add `--platform cisco-ios`. The profile uses read-only `show` com
 
 ```powershell
 go run . snapshot --source ssh --platform cisco-ios --ssh-host 192.0.2.10:22 --ssh-user admin --ssh-key .\id_ed25519 --ssh-known-hosts .\known_hosts --output .\examples\cisco-actual.conf
+```
+
+To avoid repeating SSH parameters, use a YAML inventory:
+
+```powershell
+go run . snapshot --inventory .\examples\inventory.yaml --device switch-01 --output .\examples\cisco-actual.conf
+```
+
+Relative `key` and `known_hosts` paths are resolved from the inventory directory.
+To list devices without exposing SSH parameters:
+
+```powershell
+go run . list --inventory .\examples\inventory.yaml
+```
+
+To run collection, comparison and compliance in one command:
+
+```powershell
+go run . audit `
+  --inventory .\examples\inventory.yaml `
+  --device switch-01 `
+  --desired .\examples\desired.conf `
+  --output .\examples\actual.conf
 ```
 
 ### Exit codes

@@ -22,6 +22,8 @@ go run . snapshot --output .\examples\actual.conf
 go run . diff --desired .\examples\desired.conf --actual .\examples\actual.conf
 go run . check --config .\examples\actual.conf
 go run . check --config .\examples\actual.conf --rules .\examples\rules.yaml
+go run . check --config .\examples\actual.conf --report-format json --report-output .\report.json
+go run . check --config .\examples\actual.conf --report-format sarif --report-output .\report.sarif
 ```
 
 La commande `snapshot` est actuellement disponible sur Linux et collecte l’état des interfaces et des routes en lecture seule.
@@ -37,6 +39,9 @@ rules:
     contains:
       - ssh enabled
 ```
+
+Les rapports JSON et SARIF sont disponibles pour les outils CI et GitHub Code Scanning.
+La CI du projet exécute également un contrôle de conformité et publie le rapport SARIF dans GitHub.
 
 Pour une machine distante, utilisez une clé SSH et un fichier `known_hosts` vérifié :
 
@@ -83,12 +88,17 @@ go run . snapshot --output .\examples\actual.conf
 go run . diff --desired .\examples\desired.conf --actual .\examples\actual.conf
 go run . check --config .\examples\actual.conf
 go run . check --config .\examples\actual.conf --rules .\examples\rules.yaml
+go run . check --config .\examples\actual.conf --report-format json --report-output .\report.json
+go run . check --config .\examples\actual.conf --report-format sarif --report-output .\report.sarif
 ```
 
 The `snapshot` command is currently available on Linux and collects interface and route state in read-only mode.
 
 The `check` command applies three default controls: SSH required, Telnet disabled and NTP configured.
 A custom YAML file can replace these controls.
+
+JSON and SARIF reports are available for CI tools and GitHub Code Scanning.
+The project CI also runs a compliance check and publishes the SARIF report to GitHub.
 
 For a remote machine, use an SSH private key and a verified `known_hosts` file:
 

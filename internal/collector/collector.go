@@ -64,6 +64,8 @@ func ValidatePlatform(platform Platform) error {
 
 // CollectFromSource collects a snapshot using the selected source.
 func CollectFromSource(ctx context.Context, source Source, options SSHOptions) ([]string, error) {
+	// Centralise le choix de source pour isoler la CLI des détails de collecte.
+	// Keep source selection here so the CLI stays independent from collector details.
 	switch source {
 	case SourceLocal:
 		return Collect(ctx)

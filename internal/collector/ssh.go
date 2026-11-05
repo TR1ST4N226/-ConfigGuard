@@ -22,6 +22,8 @@ func CollectSSH(ctx context.Context, options SSHOptions) ([]string, error) {
 	}
 	command := strings.TrimSpace(options.Command)
 	if command == "" {
+		// Les profils fournissent des commandes sûres tout en autorisant une commande explicite.
+		// Profiles provide safe defaults while allowing an explicit command.
 		command = defaultCommand(options.Platform)
 	}
 
@@ -42,6 +44,8 @@ func CollectSSH(ctx context.Context, options SSHOptions) ([]string, error) {
 	}
 
 	dialer := net.Dialer{Timeout: 10 * time.Second}
+	// La vérification de clé évite une connexion silencieuse à un équipement inattendu.
+	// Host-key verification prevents silently connecting to an unexpected device.
 	rawConnection, err := dialer.DialContext(ctx, "tcp", options.Host)
 	if err != nil {
 		return nil, fmt.Errorf("connect to %s: %w", options.Host, err)
@@ -61,6 +65,8 @@ func CollectSSH(ctx context.Context, options SSHOptions) ([]string, error) {
 	}
 	defer session.Close()
 
+	// La commande est exécutée une fois et sa sortie devient le snapshot normalisé.
+	// The command runs once and its output becomes the normalized snapshot.
 	output, err := session.CombinedOutput(command)
 	if err != nil {
 		return nil, fmt.Errorf("run remote command: %w: %s", err, strings.TrimSpace(string(output)))

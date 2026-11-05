@@ -69,6 +69,8 @@ func Default() []Rule {
 
 // Evaluate returns the rules that failed.
 func Evaluate(lines []string, configuredRules []Rule) []Rule {
+	// Retourne uniquement les échecs ; l'appelant choisit l'affichage et le niveau.
+	// Return failures only; callers decide how to display or score them.
 	var failed []Rule
 	for _, rule := range configuredRules {
 		if rule.Check == nil || !rule.Check(lines) {
@@ -106,6 +108,8 @@ func LoadFile(path string) ([]Rule, error) {
 		}
 
 		current := definition
+		// Copie la valeur de boucle avant de la capturer dans la règle.
+		// Copy the loop value before closing over it in the rule callback.
 		rules = append(rules, Rule{
 			ID:          current.ID,
 			Description: current.Description,
@@ -125,6 +129,8 @@ func LoadFile(path string) ([]Rule, error) {
 }
 
 func containsAny(lines []string, values ...string) bool {
+	// La comparaison ignore la casse pour faciliter le support multi-constructeurs.
+	// Matching is case-insensitive to support multiple vendors.
 	for _, line := range lines {
 		lowerLine := strings.ToLower(line)
 		for _, value := range values {

@@ -8,12 +8,15 @@ import (
 
 	"github.com/TR1ST4N226/ConfigGuard/internal/collector"
 	"github.com/TR1ST4N226/ConfigGuard/internal/config"
+	"github.com/TR1ST4N226/ConfigGuard/internal/report"
 	"github.com/TR1ST4N226/ConfigGuard/internal/rules"
 )
 
 const version = "0.1.0"
 
 func main() {
+	// Garde le routage léger ; chaque commande possède son propre parsing.
+	// Keep command dispatch small; each command owns its argument parsing.
 	if len(os.Args) < 2 {
 		printUsage()
 		os.Exit(2)
@@ -56,6 +59,8 @@ func runCheck(args []string) (bool, error) {
 
 	configPath := flags.String("config", "", "path to the current configuration")
 	rulesPath := flags.String("rules", "", "path to a custom YAML rules file")
+	reportFormat := flags.String("report-format", "text", "report format: text, json or sarif")
+	reportPath := flags.String("report-output", "", "path for a JSON or SARIF report")
 	if err := flags.Parse(args); err != nil {
 		return false, err
 	}
@@ -70,6 +75,8 @@ func runCheck(args []string) (bool, error) {
 
 	configuredRules := rules.Default()
 	if *rulesPath != "" {
+		// Le fichier personnalisé remplace la base de règles intégrée.
+		// A custom rules file replaces the built-in baseline.
 		configuredRules, err = rules.LoadFile(*rulesPath)
 		if err != nil {
 			return false, fmt.Errorf("load rules: %w", err)
@@ -77,6 +84,23 @@ func runCheck(args []string) (bool, error) {
 	}
 
 	failed := rules.Evaluate(lines, configuredRules)
+	if *reportFormat != "text" && *reportPath == "" {
+		return false, fmt.Errorf("--report-output is required for %s reports", *reportFormat)
+	}
+	result := report.FromRules(failed)
+	switch *reportFormat {
+	case "text":
+	case "json":
+		if err := report.WriteJSON(*reportPath, result); err != nil {
+			return false, err
+		}
+	case "sarif":
+		if err := report.WriteSARIF(*reportPath, result); err != nil {
+			return false, err
+		}
+	default:
+		return false, fmt.Errorf("unsupported report format %q", *reportFormat)
+	}
 	if len(failed) == 0 {
 		fmt.Println("COMPLIANT: all default rules passed")
 		return false, nil
@@ -116,6 +140,8 @@ func runSnapshot(args []string) error {
 	if err := collector.ValidatePlatform(targetPlatform); err != nil {
 		return err
 	}
+	// La collecte est en lecture seule : elle récupère l'état et écrit un snapshot local.
+	// Collection is read-only: it gathers state and writes a local snapshot.
 	lines, err := collector.CollectFromSource(context.Background(), sourceType, collector.SSHOptions{
 		Host:       *sshHost,
 		User:       *sshUser,
@@ -156,6 +182,8 @@ func runDiff(args []string) error {
 		return fmt.Errorf("read actual configuration: %w", err)
 	}
 
+	// Compare les lignes normalisées pour éviter les faux écarts liés au formatage.
+	// Compare normalized lines to avoid formatting-only drift.
 	missing, unexpected := config.Compare(desired, actual)
 	if len(missing) == 0 && len(unexpected) == 0 {
 		fmt.Println("OK: configuration is compliant")

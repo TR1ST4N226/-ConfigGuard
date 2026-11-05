@@ -14,6 +14,8 @@ func ReadFile(path string) ([]string, error) {
 
 	var lines []string
 	for _, line := range strings.Split(string(data), "\n") {
+		// La normalisation stabilise les comparaisons malgré les différences de formatage.
+		// Normalization keeps comparisons stable across formatting-only changes.
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
@@ -25,6 +27,8 @@ func ReadFile(path string) ([]string, error) {
 
 // Compare returns lines missing from the actual configuration and unexpected lines.
 func Compare(desired, actual []string) (missing, unexpected []string) {
+	// Les ensembles rendent la recherche indépendante de l'ordre des lignes.
+	// Sets make membership checks independent of line order.
 	actualSet := make(map[string]struct{}, len(actual))
 	for _, line := range actual {
 		actualSet[line] = struct{}{}

@@ -65,3 +65,32 @@ jobs:
           GOOS: ${{ matrix.os }}
           GOARCH: ${{ matrix.arch }}
         run: go build -o "dist/configguard-${{ matrix.os }}-${{ matrix.arch }}" .
+
+  compliance:
+    name: Compliance check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.x"
+          cache: true
+
+      - name: Generate SARIF report
+        run: |
+          go run . check \
+            --config ./examples/compliant.conf \
+            --report-format sarif \
+            --report-output ./configguard.sarif
+
+      - name: Upload SARIF report
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ./configguard.sarif

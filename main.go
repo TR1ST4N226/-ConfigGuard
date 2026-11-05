@@ -55,6 +55,7 @@ func runCheck(args []string) (bool, error) {
 	flags.SetOutput(os.Stderr)
 
 	configPath := flags.String("config", "", "path to the current configuration")
+	rulesPath := flags.String("rules", "", "path to a custom YAML rules file")
 	if err := flags.Parse(args); err != nil {
 		return false, err
 	}
@@ -67,7 +68,15 @@ func runCheck(args []string) (bool, error) {
 		return false, fmt.Errorf("read configuration: %w", err)
 	}
 
-	failed := rules.Evaluate(lines, rules.Default())
+	configuredRules := rules.Default()
+	if *rulesPath != "" {
+		configuredRules, err = rules.LoadFile(*rulesPath)
+		if err != nil {
+			return false, fmt.Errorf("load rules: %w", err)
+		}
+	}
+
+	failed := rules.Evaluate(lines, configuredRules)
 	if len(failed) == 0 {
 		fmt.Println("COMPLIANT: all default rules passed")
 		return false, nil

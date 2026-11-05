@@ -1,0 +1,18 @@
+rules:
+  - id: ssh-required
+    description: SSH must be enabled
+    severity: HIGH
+    contains:
+      - ssh enabled
+
+  - id: telnet-disabled
+    description: Telnet must be disabled
+    severity: HIGH
+    not_contains:
+      - telnet enabled
+
+  - id: ntp-configured
+    description: At least one NTP server must be configured
+    severity: MEDIUM
+    prefixes:
+      - ntp server

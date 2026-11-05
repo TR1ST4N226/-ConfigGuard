@@ -19,11 +19,22 @@ go run . version
 go run . snapshot --output .\examples\actual.conf
 go run . diff --desired .\examples\desired.conf --actual .\examples\actual.conf
 go run . check --config .\examples\actual.conf
+go run . check --config .\examples\actual.conf --rules .\examples\rules.yaml
 ```
 
 La commande `snapshot` est actuellement disponible sur Linux et collecte l’état des interfaces et des routes en lecture seule.
 
 La commande `check` applique trois contrôles par défaut : SSH obligatoire, Telnet interdit et NTP configuré.
+Un fichier YAML personnalisé peut remplacer ces contrôles :
+
+```yaml
+rules:
+  - id: ssh-required
+    description: SSH must be enabled
+    severity: HIGH
+    contains:
+      - ssh enabled
+```
 
 Pour une machine distante, utilisez une clé SSH et un fichier `known_hosts` vérifié :
 
@@ -65,11 +76,13 @@ go run . version
 go run . snapshot --output .\examples\actual.conf
 go run . diff --desired .\examples\desired.conf --actual .\examples\actual.conf
 go run . check --config .\examples\actual.conf
+go run . check --config .\examples\actual.conf --rules .\examples\rules.yaml
 ```
 
 The `snapshot` command is currently available on Linux and collects interface and route state in read-only mode.
 
 The `check` command applies three default controls: SSH required, Telnet disabled and NTP configured.
+A custom YAML file can replace these controls.
 
 For a remote machine, use an SSH private key and a verified `known_hosts` file:
 

@@ -59,10 +59,11 @@ go run . snapshot --source ssh --platform cisco-ios --ssh-host 192.0.2.10:22 --s
 
 ### Codes de sortie
 
-- `0` : commande terminée ; la configuration peut être conforme ou contenir un écart
+- `0` : configuration conforme
 - `1` : erreur de lecture ou d'exécution
 - `2` : utilisation invalide de la commande
 - `3` : une ou plusieurs règles de conformité ont échoué
+- `4` : un écart de configuration a été détecté
 
 ### Validation automatique
 
@@ -116,10 +117,11 @@ go run . snapshot --source ssh --platform cisco-ios --ssh-host 192.0.2.10:22 --s
 
 ### Exit codes
 
-- `0`: command completed; the configuration may be compliant or contain drift
+- `0`: configuration is compliant
 - `1`: input or execution error
 - `2`: invalid command usage
 - `3`: one or more compliance rules failed
+- `4`: configuration drift was detected
 
 ### Automated validation
 

@@ -31,9 +31,13 @@ func main() {
 			os.Exit(1)
 		}
 	case "diff":
-		if err := runDiff(os.Args[2:]); err != nil {
+		drift, err := runDiff(os.Args[2:])
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "configguard: %v\n", err)
 			os.Exit(1)
+		}
+		if drift {
+			os.Exit(4)
 		}
 	case "check":
 		failed, err := runCheck(os.Args[2:])
@@ -160,26 +164,26 @@ func runSnapshot(args []string) error {
 	return nil
 }
 
-func runDiff(args []string) error {
+func runDiff(args []string) (bool, error) {
 	flags := flag.NewFlagSet("diff", flag.ContinueOnError)
 	flags.SetOutput(os.Stderr)
 
 	desiredPath := flags.String("desired", "", "path to the expected configuration")
 	actualPath := flags.String("actual", "", "path to the current configuration")
 	if err := flags.Parse(args); err != nil {
-		return err
+		return false, err
 	}
 	if *desiredPath == "" || *actualPath == "" {
-		return fmt.Errorf("both --desired and --actual are required")
+		return false, fmt.Errorf("both --desired and --actual are required")
 	}
 
 	desired, err := config.ReadFile(*desiredPath)
 	if err != nil {
-		return fmt.Errorf("read desired configuration: %w", err)
+		return false, fmt.Errorf("read desired configuration: %w", err)
 	}
 	actual, err := config.ReadFile(*actualPath)
 	if err != nil {
-		return fmt.Errorf("read actual configuration: %w", err)
+		return false, fmt.Errorf("read actual configuration: %w", err)
 	}
 
 	// Compare les lignes normalisées pour éviter les faux écarts liés au formatage.
@@ -187,7 +191,7 @@ func runDiff(args []string) error {
 	missing, unexpected := config.Compare(desired, actual)
 	if len(missing) == 0 && len(unexpected) == 0 {
 		fmt.Println("OK: configuration is compliant")
-		return nil
+		return false, nil
 	}
 
 	fmt.Println("DRIFT: configuration differs")
@@ -197,7 +201,7 @@ func runDiff(args []string) error {
 	for _, line := range unexpected {
 		fmt.Printf("+ %s\n", line)
 	}
-	return nil
+	return true, nil
 }
 
 func printUsage() {

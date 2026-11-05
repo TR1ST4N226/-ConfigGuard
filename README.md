@@ -41,7 +41,7 @@ rules:
 ```
 
 Les rapports JSON et SARIF sont disponibles pour les outils CI et GitHub Code Scanning.
-La CI du projet exécute également un contrôle de conformité et publie le rapport SARIF dans GitHub.
+La CI du projet exécute également un contrôle de conformité et conserve le rapport SARIF comme artefact téléchargeable.
 
 Pour une machine distante, utilisez une clé SSH et un fichier `known_hosts` vérifié :
 
@@ -99,7 +99,7 @@ The `check` command applies three default controls: SSH required, Telnet disable
 A custom YAML file can replace these controls.
 
 JSON and SARIF reports are available for CI tools and GitHub Code Scanning.
-The project CI also runs a compliance check and publishes the SARIF report to GitHub.
+The project CI also runs a compliance check and keeps the SARIF report as a downloadable artifact.
 
 For a remote machine, use an SSH private key and a verified `known_hosts` file:
 

@@ -1,0 +1,13 @@
+# Go build output
+/configguard
+*.exe
+*.test
+*.out
+
+# IDE
+.idea/
+.vscode/
+
+# Local configuration and secrets
+.env
+*.local

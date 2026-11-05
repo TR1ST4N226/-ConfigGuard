@@ -27,6 +27,7 @@ go run . check --config .\examples\actual.conf --report-format sarif --report-ou
 ```
 
 La commande `snapshot` est actuellement disponible sur Linux et collecte l’état des interfaces et des routes en lecture seule.
+La collecte est limitée à 30 secondes par défaut ; utilisez `--timeout 60s` pour modifier cette limite.
 
 La commande `check` applique trois contrôles par défaut : SSH obligatoire, Telnet interdit et NTP configuré.
 Un fichier YAML personnalisé peut remplacer ces contrôles :
@@ -117,6 +118,7 @@ go run . check --config .\examples\actual.conf --report-format sarif --report-ou
 ```
 
 The `snapshot` command is currently available on Linux and collects interface and route state in read-only mode.
+Collection is limited to 30 seconds by default; use `--timeout 60s` to change the limit.
 
 The `check` command applies three default controls: SSH required, Telnet disabled and NTP configured.
 A custom YAML file can replace these controls.

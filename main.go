@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/TR1ST4N226/ConfigGuard/internal/collector"
 	"github.com/TR1ST4N226/ConfigGuard/internal/config"
@@ -102,6 +103,7 @@ func runAudit(args []string) (bool, error) {
 	deviceName := flags.String("device", "", "device name from the inventory")
 	desiredPath := flags.String("desired", "", "path to the expected configuration")
 	outputPath := flags.String("output", "", "path for the collected snapshot")
+	timeout := flags.Duration("timeout", 30*time.Second, "maximum collection time")
 	rulesPath := flags.String("rules", "", "path to a custom YAML rules file")
 	reportFormat := flags.String("report-format", "text", "report format: text, json or sarif")
 	reportPath := flags.String("report-output", "", "path for a JSON or SARIF report")
@@ -110,6 +112,9 @@ func runAudit(args []string) (bool, error) {
 	}
 	if *inventoryPath == "" || *deviceName == "" || *desiredPath == "" || *outputPath == "" {
 		return false, fmt.Errorf("--inventory, --device, --desired and --output are required")
+	}
+	if *timeout <= 0 {
+		return false, fmt.Errorf("--timeout must be greater than zero")
 	}
 
 	devices, err := inventory.LoadFile(*inventoryPath)
@@ -120,7 +125,10 @@ func runAudit(args []string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	lines, err := collector.CollectFromSource(context.Background(), device.Source, device.SSH)
+	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
+	defer cancel()
+
+	lines, err := collector.CollectFromSource(ctx, device.Source, device.SSH)
 	if err != nil {
 		return false, fmt.Errorf("collect snapshot: %w", err)
 	}
@@ -251,6 +259,7 @@ func runSnapshot(args []string) error {
 
 	source := flags.String("source", string(collector.SourceLocal), "snapshot source: local or ssh")
 	outputPath := flags.String("output", "", "path for the collected configuration")
+	timeout := flags.Duration("timeout", 30*time.Second, "maximum collection time")
 	inventoryPath := flags.String("inventory", "", "path to a YAML inventory")
 	deviceName := flags.String("device", "", "device name from the inventory")
 	sshHost := flags.String("ssh-host", "", "SSH host and port, for example 192.0.2.10:22")
@@ -264,6 +273,9 @@ func runSnapshot(args []string) error {
 	}
 	if *outputPath == "" {
 		return fmt.Errorf("--output is required")
+	}
+	if *timeout <= 0 {
+		return fmt.Errorf("--timeout must be greater than zero")
 	}
 
 	sourceType := collector.Source(*source)
@@ -299,9 +311,12 @@ func runSnapshot(args []string) error {
 	if err := collector.ValidatePlatform(targetPlatform); err != nil {
 		return err
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
+	defer cancel()
+
 	// La collecte est en lecture seule : elle récupère l'état et écrit un snapshot local.
 	// Collection is read-only: it gathers state and writes a local snapshot.
-	lines, err := collector.CollectFromSource(context.Background(), sourceType, options)
+	lines, err := collector.CollectFromSource(ctx, sourceType, options)
 	if err != nil {
 		return err
 	}

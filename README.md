@@ -1,5 +1,7 @@
 # ConfigGuard
 
+[![CI](https://github.com/TR1ST4N226/-ConfigGuard/actions/workflows/ci.yml/badge.svg)](https://github.com/TR1ST4N226/-ConfigGuard/actions/workflows/ci.yml)
+
 ## Français
 
 ConfigGuard détecte les écarts entre la configuration réseau attendue et la configuration actuellement appliquée à un équipement ou un serveur.
@@ -57,6 +59,10 @@ go run . snapshot --source ssh --platform cisco-ios --ssh-host 192.0.2.10:22 --s
 - `2` : utilisation invalide de la commande
 - `3` : une ou plusieurs règles de conformité ont échoué
 
+### Validation automatique
+
+GitHub Actions exécute automatiquement le formatage, les tests, `go vet` et la compilation Linux/Windows sur chaque push et chaque Pull Request.
+
 ## English
 
 ConfigGuard detects drift between the expected network configuration and the configuration currently applied to an equipment or server.
@@ -104,3 +110,7 @@ go run . snapshot --source ssh --platform cisco-ios --ssh-host 192.0.2.10:22 --s
 - `1`: input or execution error
 - `2`: invalid command usage
 - `3`: one or more compliance rules failed
+
+### Automated validation
+
+GitHub Actions automatically runs formatting checks, tests, `go vet`, and Linux/Windows builds on every push and Pull Request.

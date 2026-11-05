@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"os"
@@ -8,7 +8,7 @@ import (
 )
 
 func TestCompareReportsMissingAndUnexpectedLines(t *testing.T) {
-	missing, unexpected := compare(
+	missing, unexpected := Compare(
 		[]string{"hostname switch-01", "ssh enabled"},
 		[]string{"hostname switch-01", "telnet enabled"},
 	)
@@ -21,14 +21,14 @@ func TestCompareReportsMissingAndUnexpectedLines(t *testing.T) {
 	}
 }
 
-func TestReadConfigIgnoresCommentsAndBlankLines(t *testing.T) {
+func TestReadFileIgnoresCommentsAndBlankLines(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.conf")
 	content := "# comment\n\n hostname switch-01 \nssh enabled\n"
 	if err := os.WriteFile(path, []byte(content), 0600); err != nil {
 		t.Fatal(err)
 	}
 
-	got, err := readConfig(path)
+	got, err := ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +40,7 @@ func TestReadConfigIgnoresCommentsAndBlankLines(t *testing.T) {
 }
 
 func TestCompareReportsCompliance(t *testing.T) {
-	missing, unexpected := compare(
+	missing, unexpected := Compare(
 		[]string{"hostname switch-01", "ssh enabled"},
 		[]string{"hostname switch-01", "ssh enabled"},
 	)

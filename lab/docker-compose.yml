@@ -1,0 +1,29 @@
+services:
+  configguard:
+    build:
+      context: ./containerlab
+    image: configguard-lab:local
+    container_name: configguard-lab
+    volumes:
+      - ../:/workspace
+    networks:
+      lab:
+        ipv4_address: 172.30.0.2
+    command: ["tail", "-f", "/dev/null"]
+
+  network-device:
+    build:
+      context: ./containerlab
+    image: configguard-lab:local
+    container_name: configguard-network-device
+    networks:
+      lab:
+        ipv4_address: 172.30.0.10
+    command: ["tail", "-f", "/dev/null"]
+
+networks:
+  lab:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24

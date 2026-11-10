@@ -126,6 +126,10 @@ A custom YAML file can replace these controls.
 JSON and SARIF reports are available for CI tools and GitHub Code Scanning.
 The project CI also runs a compliance check and keeps the SARIF report as a downloadable artifact.
 
+### Network lab
+
+An initial Containerlab topology is available in `lab/containerlab`. It uses Linux containers only and does not include proprietary network images.
+
 For a remote machine, use an SSH private key and a verified `known_hosts` file:
 
 ```powershell

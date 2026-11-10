@@ -1,0 +1,12 @@
+name: configguard-lab
+
+topology:
+  nodes:
+    configguard:
+      kind: linux
+      image: configguard-lab:local
+      binds:
+        - ../../:/workspace
+    network-device:
+      kind: linux
+      image: configguard-lab:local

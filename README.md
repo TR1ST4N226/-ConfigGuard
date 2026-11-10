@@ -1,6 +1,7 @@
 # ConfigGuard
 
 [![CI](https://github.com/TR1ST4N226/-ConfigGuard/actions/workflows/ci.yml/badge.svg)](https://github.com/TR1ST4N226/-ConfigGuard/actions/workflows/ci.yml)
+[![Release](https://github.com/TR1ST4N226/-ConfigGuard/actions/workflows/release.yml/badge.svg)](https://github.com/TR1ST4N226/-ConfigGuard/actions/workflows/release.yml)
 
 ```text
 ░██████                            ░████ ░██             ░██████                                        ░██ 
@@ -56,6 +57,17 @@ rules:
 
 Les rapports JSON et SARIF sont disponibles pour les outils CI et GitHub Code Scanning.
 La CI du projet exécute également un contrôle de conformité et conserve le rapport SARIF comme artefact téléchargeable.
+
+Des règles étendues optionnelles sont disponibles dans `examples/extended-rules.yaml`
+pour contrôler le DNS, SNMP et le durcissement SSH :
+
+```powershell
+go run . check `
+  --config .\examples\actual.conf `
+  --rules .\examples\extended-rules.yaml
+```
+
+Voir [CHANGELOG.md](CHANGELOG.md) pour l'historique des versions.
 
 Pour une machine distante, utilisez une clé SSH et un fichier `known_hosts` vérifié :
 

@@ -1,0 +1,22 @@
+rules:
+  - id: dns-configured
+    description: At least one DNS server must be configured
+    severity: MEDIUM
+    prefixes:
+      - dns server
+      - ip name-server
+      - nameserver
+
+  - id: snmp-public-disabled
+    description: The default public SNMP community must not be configured
+    severity: HIGH
+    not_contains:
+      - snmp community public
+      - snmp-server community public
+
+  - id: ssh-v1-disabled
+    description: SSH protocol version 1 must be disabled
+    severity: HIGH
+    not_contains:
+      - ssh version 1
+      - ip ssh version 1

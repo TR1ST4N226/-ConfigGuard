@@ -61,6 +61,12 @@ go run . snapshot `
 
 Les fichiers de clé, `known_hosts` et les snapshots du laboratoire sont ignorés par Git.
 
+Smoke test automatisé :
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\lab\smoke-test.ps1
+```
+
 Prérequis :
 
 - Linux ou WSL2 ;
@@ -126,6 +132,12 @@ docker compose -f .\lab\docker-compose.yml up -d --build --force-recreate
 Then build `known_hosts` from the container host keys using the equivalent PowerShell procedure above. Run the read-only SSH snapshot with the `go run . snapshot` command shown above.
 
 Keys, `known_hosts`, and lab snapshots are ignored by Git.
+
+Automated smoke test:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\lab\smoke-test.ps1
+```
 
 Requirements:
 

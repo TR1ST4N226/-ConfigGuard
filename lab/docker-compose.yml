@@ -19,7 +19,7 @@ services:
     ports:
       - "2222:22"
     volumes:
-      - ./ssh:/lab-ssh:ro
+      - ${CONFIGGUARD_SSH_DIR:-./ssh}:/lab-ssh:ro
     networks:
       lab:
         ipv4_address: 172.30.0.10

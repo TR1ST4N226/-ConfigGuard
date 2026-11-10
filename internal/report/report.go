@@ -67,7 +67,7 @@ func WriteJSON(path string, result Result) error {
 // WriteSARIF écrit un rapport SARIF utilisable par GitHub Code Scanning.
 // WriteSARIF writes a SARIF report consumable by GitHub Code Scanning.
 func WriteSARIF(path string, result Result) error {
-	runs := []sarifRun{{Tool: sarifTool{Driver: sarifDriver{Name: "ConfigGuard", Version: "0.1.0"}}}}
+	runs := []sarifRun{{Tool: sarifTool{Driver: sarifDriver{Name: "ConfigGuard", Version: "0.2.0"}}}}
 	for _, line := range result.DriftMissing {
 		runs[0].Results = append(runs[0].Results, sarifResult{
 			RuleID:  "config-drift",

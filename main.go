@@ -14,7 +14,17 @@ import (
 	"github.com/TR1ST4N226/ConfigGuard/internal/rules"
 )
 
-const version = "0.1.0"
+const version = "0.2.0"
+
+const banner = `░██████                            ░████ ░██             ░██████                                        ░██ 
+ ░██   ░██                          ░██                   ░██   ░██                                       ░██ 
+░██         ░███████  ░████████  ░████████ ░██ ░████████ ░██        ░██    ░██  ░██████   ░██░████  ░████████ 
+░██        ░██    ░██ ░██    ░██    ░██    ░██░██    ░██ ░██  █████ ░██    ░██       ░██  ░███     ░██    ░██ 
+░██        ░██    ░██ ░██    ░██    ░██    ░██░██    ░██ ░██     ██ ░██    ░██  ░███████  ░██      ░██    ░██ 
+ ░██   ░██ ░██    ░██ ░██    ░██    ░██    ░██░██   ░███  ░██  ░███ ░██   ░███ ░██   ░██  ░██      ░██   ░███ 
+  ░██████   ░███████  ░██    ░██    ░██    ░██ ░█████░██   ░█████░█  ░█████░██  ░█████░██ ░██       ░█████░██ 
+                                                     ░██                                                      
+                                               ░███████`
 
 type auditResult struct {
 	drift        bool
@@ -41,6 +51,7 @@ func main() {
 
 	switch os.Args[1] {
 	case "version":
+		fmt.Println(banner)
 		fmt.Printf("configguard %s\n", version)
 	case "snapshot":
 		if err := runSnapshot(os.Args[2:]); err != nil {
@@ -385,6 +396,7 @@ func runDiff(args []string) (bool, error) {
 }
 
 func printUsage() {
+	fmt.Println(banner)
 	fmt.Println(`ConfigGuard detects drift between expected and current network configuration.
 
 Usage:

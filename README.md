@@ -2,13 +2,26 @@
 
 [![CI](https://github.com/TR1ST4N226/-ConfigGuard/actions/workflows/ci.yml/badge.svg)](https://github.com/TR1ST4N226/-ConfigGuard/actions/workflows/ci.yml)
 
+```text
+░██████                            ░████ ░██             ░██████                                        ░██ 
+ ░██   ░██                          ░██                   ░██   ░██                                       ░██ 
+░██         ░███████  ░████████  ░████████ ░██ ░████████ ░██        ░██    ░██  ░██████   ░██░████  ░████████ 
+░██        ░██    ░██ ░██    ░██    ░██    ░██░██    ░██ ░██  █████ ░██    ░██       ░██  ░███     ░██    ░██ 
+░██        ░██    ░██ ░██    ░██    ░██    ░██░██    ░██ ░██     ██ ░██    ░██  ░███████  ░██      ░██    ░██ 
+ ░██   ░██ ░██    ░██ ░██    ░██    ░██    ░██░██   ░███  ░██  ░███ ░██   ░███ ░██   ░██  ░██      ░██   ░███ 
+  ░██████   ░███████  ░██    ░██    ░██    ░██ ░█████░██   ░█████░█  ░█████░██  ░█████░██ ░██       ░█████░██ 
+                                                     ░██                                                      
+                                               ░███████
+```
+
 ## Français
 
 ConfigGuard détecte les écarts entre la configuration réseau attendue et la configuration actuellement appliquée à un équipement ou un serveur.
 
 ### État du projet
 
-MVP initial. La CLI compare actuellement deux fichiers de configuration en lecture seule.
+Version 0.2.0. La CLI prend en charge la collecte locale et SSH, les inventaires,
+les audits, les règles de conformité et les rapports JSON/SARIF en lecture seule.
 
 ### Prérequis
 

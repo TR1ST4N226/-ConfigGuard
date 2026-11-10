@@ -16,6 +16,11 @@ import (
 
 const version = "0.1.0"
 
+type auditResult struct {
+	drift        bool
+	nonCompliant bool
+}
+
 func main() {
 	// Garde le routage léger ; chaque commande possède son propre parsing.
 	// Keep command dispatch small; each command owns its argument parsing.
@@ -43,8 +48,11 @@ func main() {
 			fmt.Fprintf(os.Stderr, "configguard: %v\n", err)
 			os.Exit(1)
 		}
-		if result {
+		if result.drift {
 			os.Exit(4)
+		}
+		if result.nonCompliant {
+			os.Exit(3)
 		}
 	case "diff":
 		drift, err := runDiff(os.Args[2:])
@@ -95,7 +103,7 @@ func runList(args []string) error {
 	return nil
 }
 
-func runAudit(args []string) (bool, error) {
+func runAudit(args []string) (auditResult, error) {
 	flags := flag.NewFlagSet("audit", flag.ContinueOnError)
 	flags.SetOutput(os.Stderr)
 
@@ -108,45 +116,46 @@ func runAudit(args []string) (bool, error) {
 	reportFormat := flags.String("report-format", "text", "report format: text, json or sarif")
 	reportPath := flags.String("report-output", "", "path for a JSON or SARIF report")
 	if err := flags.Parse(args); err != nil {
-		return false, err
+		return auditResult{}, err
 	}
 	if *inventoryPath == "" || *deviceName == "" || *desiredPath == "" || *outputPath == "" {
-		return false, fmt.Errorf("--inventory, --device, --desired and --output are required")
+		return auditResult{}, fmt.Errorf("--inventory, --device, --desired and --output are required")
 	}
 	if *timeout <= 0 {
-		return false, fmt.Errorf("--timeout must be greater than zero")
+		return auditResult{}, fmt.Errorf("--timeout must be greater than zero")
 	}
 
 	devices, err := inventory.LoadFile(*inventoryPath)
 	if err != nil {
-		return false, err
+		return auditResult{}, err
 	}
 	device, err := inventory.Find(devices, *deviceName)
 	if err != nil {
-		return false, err
+		return auditResult{}, err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
 	defer cancel()
 
 	lines, err := collector.CollectFromSource(ctx, device.Source, device.SSH)
 	if err != nil {
-		return false, fmt.Errorf("collect snapshot: %w", err)
+		return auditResult{}, fmt.Errorf("collect snapshot: %w", err)
 	}
 	if err := collector.Write(*outputPath, lines); err != nil {
-		return false, fmt.Errorf("write snapshot: %w", err)
+		return auditResult{}, fmt.Errorf("write snapshot: %w", err)
 	}
 
 	desired, err := config.ReadFile(*desiredPath)
 	if err != nil {
-		return false, fmt.Errorf("read desired configuration: %w", err)
+		return auditResult{}, fmt.Errorf("read desired configuration: %w", err)
 	}
 	actual, err := config.ReadFile(*outputPath)
 	if err != nil {
-		return false, fmt.Errorf("read snapshot: %w", err)
+		return auditResult{}, fmt.Errorf("read snapshot: %w", err)
 	}
 
 	missing, unexpected := config.Compare(desired, actual)
-	if len(missing) > 0 || len(unexpected) > 0 {
+	drift := len(missing) > 0 || len(unexpected) > 0
+	if drift {
 		fmt.Println("DRIFT: configuration differs")
 		for _, line := range missing {
 			fmt.Printf("- %s\n", line)
@@ -154,43 +163,44 @@ func runAudit(args []string) (bool, error) {
 		for _, line := range unexpected {
 			fmt.Printf("+ %s\n", line)
 		}
-		return true, nil
 	}
 
 	configuredRules := rules.Default()
 	if *rulesPath != "" {
 		configuredRules, err = rules.LoadFile(*rulesPath)
 		if err != nil {
-			return false, fmt.Errorf("load rules: %w", err)
+			return auditResult{}, fmt.Errorf("load rules: %w", err)
 		}
 	}
 	failed := rules.Evaluate(actual, configuredRules)
 	if *reportFormat != "text" && *reportPath == "" {
-		return false, fmt.Errorf("--report-output is required for %s reports", *reportFormat)
+		return auditResult{}, fmt.Errorf("--report-output is required for %s reports", *reportFormat)
 	}
 	result := report.FromRules(failed)
 	switch *reportFormat {
 	case "text":
 	case "json":
 		if err := report.WriteJSON(*reportPath, result); err != nil {
-			return false, err
+			return auditResult{}, err
 		}
 	case "sarif":
 		if err := report.WriteSARIF(*reportPath, result); err != nil {
-			return false, err
+			return auditResult{}, err
 		}
 	default:
-		return false, fmt.Errorf("unsupported report format %q", *reportFormat)
+		return auditResult{}, fmt.Errorf("unsupported report format %q", *reportFormat)
 	}
 	if len(failed) > 0 {
 		fmt.Printf("NON-COMPLIANT: %d rule(s) failed\n", len(failed))
 		for _, rule := range failed {
 			fmt.Printf("- %s [%s] %s\n", rule.ID, rule.Severity, rule.Description)
 		}
-		return true, nil
+		return auditResult{drift: drift, nonCompliant: true}, nil
 	}
-	fmt.Println("COMPLIANT: audit passed")
-	return false, nil
+	if !drift {
+		fmt.Println("COMPLIANT: audit passed")
+	}
+	return auditResult{drift: drift}, nil
 }
 
 func runCheck(args []string) (bool, error) {

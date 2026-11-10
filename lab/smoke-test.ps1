@@ -26,6 +26,8 @@ try {
     $authorizedKeys = Join-Path $tempDirectory "authorized_keys"
     $knownHosts = Join-Path $tempDirectory "known_hosts"
     $binary = Join-Path $tempDirectory "configguard.exe"
+    $inventory = Join-Path $tempDirectory "inventory.yaml"
+    $driftInventory = Join-Path $tempDirectory "drift-inventory.yaml"
 
     $keygenCommand = 'ssh-keygen -t ed25519 -f "' + $privateKey + '" -N "" -C configguard-smoke'
     & cmd.exe /c $keygenCommand
@@ -53,6 +55,54 @@ try {
     Push-Location $repoRoot
     try {
         Invoke-ExpectedExitCode "go" @("build", "-o", $binary, ".")
+        @"
+devices:
+  - name: docker-device
+    source: ssh
+    platform: linux
+    ssh:
+      host: 127.0.0.1:2222
+      user: root
+      key: '$privateKey'
+      known_hosts: '$knownHosts'
+      command: >-
+        printf 'hostname switch-01\nntp server 10.0.0.10\nssh enabled\n'
+"@ | Set-Content -Encoding utf8 $inventory
+
+        Invoke-ExpectedExitCode $binary @(
+            "audit",
+            "--inventory=$inventory",
+            "--device=docker-device",
+            "--desired=.\examples\desired.conf",
+            "--output=$tempDirectory\audit.conf",
+            "--report-format=json",
+            "--report-output=$tempDirectory\audit.json"
+        )
+
+        @"
+devices:
+  - name: docker-device
+    source: ssh
+    platform: linux
+    ssh:
+      host: 127.0.0.1:2222
+      user: root
+      key: '$privateKey'
+      known_hosts: '$knownHosts'
+      command: >-
+        printf 'hostname switch-01\nntp server 10.0.0.20\ntelnet enabled\n'
+"@ | Set-Content -Encoding utf8 $driftInventory
+
+        Invoke-ExpectedExitCode $binary @(
+            "audit",
+            "--inventory=$driftInventory",
+            "--device=docker-device",
+            "--desired=.\examples\desired.conf",
+            "--output=$tempDirectory\audit-drift.conf",
+            "--report-format=json",
+            "--report-output=$tempDirectory\audit-drift.json"
+        ) 4
+
         $commonArguments = @(
             "snapshot",
             "--source=ssh",

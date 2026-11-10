@@ -61,6 +61,18 @@ go run . snapshot `
 
 Les fichiers de clé, `known_hosts` et les snapshots du laboratoire sont ignorés par Git.
 
+Audit via l'inventaire :
+
+```powershell
+go run . audit `
+  --inventory .\examples\lab-inventory.yaml `
+  --device docker-device `
+  --desired .\examples\desired.conf `
+  --output .\lab\ssh\audit.conf `
+  --report-format json `
+  --report-output .\lab\ssh\audit.json
+```
+
 Smoke test automatisé :
 
 ```powershell
@@ -130,6 +142,18 @@ docker compose -f .\lab\docker-compose.yml up -d --build --force-recreate
 ```
 
 Then build `known_hosts` from the container host keys using the equivalent PowerShell procedure above. Run the read-only SSH snapshot with the `go run . snapshot` command shown above.
+
+Run a complete inventory-driven audit:
+
+```powershell
+go run . audit `
+  --inventory .\examples\lab-inventory.yaml `
+  --device docker-device `
+  --desired .\examples\desired.conf `
+  --output .\lab\ssh\audit.conf `
+  --report-format json `
+  --report-output .\lab\ssh\audit.json
+```
 
 Keys, `known_hosts`, and lab snapshots are ignored by Git.
 

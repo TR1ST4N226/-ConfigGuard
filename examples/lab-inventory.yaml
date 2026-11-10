@@ -1,0 +1,11 @@
+devices:
+  - name: docker-device
+    source: ssh
+    platform: linux
+    ssh:
+      host: 127.0.0.1:2222
+      user: root
+      key: ../lab/ssh/id_ed25519
+      known_hosts: ../lab/ssh/known_hosts
+      command: >-
+        printf 'hostname switch-01\nntp server 10.0.0.10\nssh enabled\n'

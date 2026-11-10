@@ -183,7 +183,7 @@ func runAudit(args []string) (auditResult, error) {
 	if *reportFormat != "text" && *reportPath == "" {
 		return auditResult{}, fmt.Errorf("--report-output is required for %s reports", *reportFormat)
 	}
-	result := report.FromRules(failed)
+	result := report.FromAudit(failed, missing, unexpected)
 	switch *reportFormat {
 	case "text":
 	case "json":

@@ -48,3 +48,34 @@ func TestWriteSARIF(t *testing.T) {
 		t.Fatalf("SARIF report = %s", data)
 	}
 }
+
+func TestFromAuditIncludesDrift(t *testing.T) {
+	result := FromAudit(nil, []string{"ntp server 10.0.0.10"}, []string{"telnet enabled"})
+
+	if result.Compliant {
+		t.Fatal("FromAudit() marked drift as compliant")
+	}
+	if !result.Drift {
+		t.Fatal("FromAudit() did not mark drift")
+	}
+	if len(result.DriftMissing) != 1 || len(result.DriftUnexpected) != 1 {
+		t.Fatalf("FromAudit() drift = %#v/%#v", result.DriftMissing, result.DriftUnexpected)
+	}
+}
+
+func TestWriteSARIFIncludesDrift(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "drift.sarif")
+	result := FromAudit(nil, []string{"ntp server 10.0.0.10"}, nil)
+
+	if err := WriteSARIF(path, result); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"ruleId": "config-drift"`) ||
+		!strings.Contains(string(data), "Missing configuration: ntp server 10.0.0.10") {
+		t.Fatalf("SARIF drift report = %s", data)
+	}
+}

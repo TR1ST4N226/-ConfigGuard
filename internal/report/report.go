@@ -19,8 +19,11 @@ type Finding struct {
 // Result contient le résultat d'un contrôle de conformité.
 // Result contains the outcome of one compliance check.
 type Result struct {
-	Compliant bool      `json:"compliant"`
-	Findings  []Finding `json:"findings"`
+	Compliant       bool      `json:"compliant"`
+	Drift           bool      `json:"drift,omitempty"`
+	DriftMissing    []string  `json:"drift_missing,omitempty"`
+	DriftUnexpected []string  `json:"drift_unexpected,omitempty"`
+	Findings        []Finding `json:"findings"`
 }
 
 // FromRules convertit les règles internes en résultat exploitable par un rapport.
@@ -35,6 +38,16 @@ func FromRules(failed []rules.Rule) Result {
 		})
 	}
 	return Result{Compliant: len(findings) == 0, Findings: findings}
+}
+
+// FromAudit combines drift and rule findings into one report result.
+func FromAudit(failed []rules.Rule, missing, unexpected []string) Result {
+	result := FromRules(failed)
+	result.Drift = len(missing) > 0 || len(unexpected) > 0
+	result.DriftMissing = append([]string(nil), missing...)
+	result.DriftUnexpected = append([]string(nil), unexpected...)
+	result.Compliant = !result.Drift && result.Compliant
+	return result
 }
 
 // WriteJSON écrit un rapport de conformité lisible par une machine.
@@ -55,6 +68,20 @@ func WriteJSON(path string, result Result) error {
 // WriteSARIF writes a SARIF report consumable by GitHub Code Scanning.
 func WriteSARIF(path string, result Result) error {
 	runs := []sarifRun{{Tool: sarifTool{Driver: sarifDriver{Name: "ConfigGuard", Version: "0.1.0"}}}}
+	for _, line := range result.DriftMissing {
+		runs[0].Results = append(runs[0].Results, sarifResult{
+			RuleID:  "config-drift",
+			Level:   "error",
+			Message: sarifMessage{Text: "Missing configuration: " + line},
+		})
+	}
+	for _, line := range result.DriftUnexpected {
+		runs[0].Results = append(runs[0].Results, sarifResult{
+			RuleID:  "config-drift",
+			Level:   "error",
+			Message: sarifMessage{Text: "Unexpected configuration: " + line},
+		})
+	}
 	for _, finding := range result.Findings {
 		runs[0].Results = append(runs[0].Results, sarifResult{
 			RuleID:  finding.ID,

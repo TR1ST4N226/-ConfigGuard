@@ -2,5 +2,7 @@
 *.test
 *.out
 
-
 .env
+
+lab/ssh/*
+!lab/ssh/.gitkeep

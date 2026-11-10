@@ -16,10 +16,25 @@ services:
       context: ./containerlab
     image: configguard-lab:local
     container_name: configguard-network-device
+    ports:
+      - "2222:22"
+    volumes:
+      - ./ssh:/lab-ssh:ro
     networks:
       lab:
         ipv4_address: 172.30.0.10
-    command: ["tail", "-f", "/dev/null"]
+    command:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        test -s /lab-ssh/authorized_keys
+        mkdir -p /run/sshd /root/.ssh
+        cp /lab-ssh/authorized_keys /root/.ssh/authorized_keys
+        chmod 700 /root/.ssh
+        chmod 600 /root/.ssh/authorized_keys
+        /usr/sbin/sshd
+        exec tail -f /dev/null
 
 networks:
   lab:

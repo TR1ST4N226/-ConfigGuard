@@ -29,6 +29,13 @@ try {
     $binary = Join-Path $tempDirectory "configguard.exe"
     $inventory = Join-Path $tempDirectory "inventory.yaml"
     $driftInventory = Join-Path $tempDirectory "drift-inventory.yaml"
+    $desired = Join-Path (Join-Path $repoRoot "examples") "desired.conf"
+    $auditSnapshot = Join-Path $tempDirectory "audit.conf"
+    $auditReport = Join-Path $tempDirectory "audit.json"
+    $driftAuditSnapshot = Join-Path $tempDirectory "audit-drift.conf"
+    $driftAuditReport = Join-Path $tempDirectory "audit-drift.json"
+    $compliantSnapshot = Join-Path $tempDirectory "compliant.conf"
+    $driftSnapshot = Join-Path $tempDirectory "drift.conf"
 
     if ($isWindowsHost) {
         $keygenCommand = 'ssh-keygen -t ed25519 -f "' + $privateKey + '" -N "" -C configguard-smoke'
@@ -79,10 +86,10 @@ devices:
             "audit",
             "--inventory=$inventory",
             "--device=docker-device",
-            "--desired=.\examples\desired.conf",
-            "--output=$tempDirectory\audit.conf",
+            "--desired=$desired",
+            "--output=$auditSnapshot",
             "--report-format=json",
-            "--report-output=$tempDirectory\audit.json"
+            "--report-output=$auditReport"
         )
 
         @"
@@ -103,10 +110,10 @@ devices:
             "audit",
             "--inventory=$driftInventory",
             "--device=docker-device",
-            "--desired=.\examples\desired.conf",
-            "--output=$tempDirectory\audit-drift.conf",
+            "--desired=$desired",
+            "--output=$driftAuditSnapshot",
             "--report-format=json",
-            "--report-output=$tempDirectory\audit-drift.json"
+            "--report-output=$driftAuditReport"
         ) 4
 
         $commonArguments = @(
@@ -120,30 +127,30 @@ devices:
 
         Invoke-ExpectedExitCode $binary ($commonArguments + @(
             "--ssh-command=printf 'hostname switch-01\nntp server 10.0.0.10\nssh enabled\n'",
-            "--output=$tempDirectory\compliant.conf"
+            "--output=$compliantSnapshot"
         ))
         Invoke-ExpectedExitCode $binary @(
             "diff",
-            "--desired=.\examples\desired.conf",
-            "--actual=$tempDirectory\compliant.conf"
+            "--desired=$desired",
+            "--actual=$compliantSnapshot"
         )
         Invoke-ExpectedExitCode $binary @(
             "check",
-            "--config=$tempDirectory\compliant.conf"
+            "--config=$compliantSnapshot"
         )
 
         Invoke-ExpectedExitCode $binary ($commonArguments + @(
             "--ssh-command=printf 'hostname switch-01\nntp server 10.0.0.20\ntelnet enabled\n'",
-            "--output=$tempDirectory\drift.conf"
+            "--output=$driftSnapshot"
         ))
         Invoke-ExpectedExitCode $binary @(
             "diff",
-            "--desired=.\examples\desired.conf",
-            "--actual=$tempDirectory\drift.conf"
+            "--desired=$desired",
+            "--actual=$driftSnapshot"
         ) 4
         Invoke-ExpectedExitCode $binary @(
             "check",
-            "--config=$tempDirectory\drift.conf"
+            "--config=$driftSnapshot"
         ) 3
     }
     finally {

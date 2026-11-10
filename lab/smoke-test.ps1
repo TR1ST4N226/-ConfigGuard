@@ -3,7 +3,8 @@ Set-StrictMode -Version Latest
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $composeFile = Join-Path $PSScriptRoot "docker-compose.yml"
-$tempDirectory = Join-Path $env:TEMP ("configguard-smoke-" + [Guid]::NewGuid().ToString("N"))
+$tempDirectory = Join-Path ([IO.Path]::GetTempPath()) ("configguard-smoke-" + [Guid]::NewGuid().ToString("N"))
+$isWindowsHost = $env:OS -eq "Windows_NT"
 $composeStarted = $false
 
 function Invoke-ExpectedExitCode {
@@ -29,8 +30,13 @@ try {
     $inventory = Join-Path $tempDirectory "inventory.yaml"
     $driftInventory = Join-Path $tempDirectory "drift-inventory.yaml"
 
-    $keygenCommand = 'ssh-keygen -t ed25519 -f "' + $privateKey + '" -N "" -C configguard-smoke'
-    & cmd.exe /c $keygenCommand
+    if ($isWindowsHost) {
+        $keygenCommand = 'ssh-keygen -t ed25519 -f "' + $privateKey + '" -N "" -C configguard-smoke'
+        & cmd.exe /c $keygenCommand
+    } else {
+        $keygenCommand = "ssh-keygen -t ed25519 -f '$privateKey' -N '' -C configguard-smoke"
+        & bash -c $keygenCommand
+    }
     if ($LASTEXITCODE -ne 0) {
         throw "ssh-keygen returned $LASTEXITCODE"
     }

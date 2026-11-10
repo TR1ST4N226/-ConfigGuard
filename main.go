@@ -21,6 +21,16 @@ type auditResult struct {
 	nonCompliant bool
 }
 
+func (r auditResult) exitCode() int {
+	if r.drift {
+		return 4
+	}
+	if r.nonCompliant {
+		return 3
+	}
+	return 0
+}
+
 func main() {
 	// Garde le routage léger ; chaque commande possède son propre parsing.
 	// Keep command dispatch small; each command owns its argument parsing.
@@ -48,11 +58,8 @@ func main() {
 			fmt.Fprintf(os.Stderr, "configguard: %v\n", err)
 			os.Exit(1)
 		}
-		if result.drift {
-			os.Exit(4)
-		}
-		if result.nonCompliant {
-			os.Exit(3)
+		if exitCode := result.exitCode(); exitCode != 0 {
+			os.Exit(exitCode)
 		}
 	case "diff":
 		drift, err := runDiff(os.Args[2:])

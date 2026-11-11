@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.2] - 2026-11-11
+
+### Fixed
+
+- Synchronized the CLI, SARIF reports, and documentation version to `0.2.2`.
+
 ## [0.2.0] - 2026-11-10
 
 ### Added

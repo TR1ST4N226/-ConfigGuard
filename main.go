@@ -14,7 +14,7 @@ import (
 	"github.com/TR1ST4N226/ConfigGuard/internal/rules"
 )
 
-const version = "0.2.0"
+const version = "0.2.2"
 
 const banner = `░██████                            ░████ ░██             ░██████                                        ░██ 
  ░██   ░██                          ░██                   ░██   ░██                                       ░██ 

@@ -21,7 +21,7 @@ ConfigGuard détecte les écarts entre la configuration réseau attendue et la c
 
 ### État du projet
 
-Version 0.2.0. La CLI prend en charge la collecte locale et SSH, les inventaires,
+Version 0.2.2. La CLI prend en charge la collecte locale et SSH, les inventaires,
 les audits, les règles de conformité et les rapports JSON/SARIF en lecture seule.
 
 ### Prérequis

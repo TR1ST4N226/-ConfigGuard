@@ -27,6 +27,8 @@ les audits, les règles de conformité et les rapports JSON/SARIF en lecture seu
 ### Prérequis
 
 - Go 1.27.3 ou version ultérieure
+- Docker Desktop ou Docker Engine, uniquement pour le laboratoire SSH
+- PowerShell 7 ou Windows PowerShell, pour exécuter le smoke test sous Windows
 
 ### Utilisation
 
@@ -57,6 +59,21 @@ rules:
 
 Les rapports JSON et SARIF sont disponibles pour les outils CI et GitHub Code Scanning.
 La CI du projet exécute également un contrôle de conformité et conserve le rapport SARIF comme artefact téléchargeable.
+
+### Laboratoire Docker/SSH
+
+Le laboratoire reproductible se trouve dans `lab/` et utilise Docker Compose.
+Il fournit un équipement Linux simulé avec un serveur SSH, sans image réseau propriétaire :
+
+```powershell
+docker compose -f .\lab\docker-compose.yml up -d --build
+powershell -ExecutionPolicy Bypass -File .\lab\smoke-test.ps1
+docker compose -f .\lab\docker-compose.yml down
+```
+
+Le smoke test vérifie la collecte SSH par clé, un audit conforme, la détection
+d'un drift et les codes de sortie `0`, `3` et `4`. Il crée et supprime ses
+clés et snapshots temporaires automatiquement.
 
 Des règles étendues optionnelles sont disponibles dans `examples/extended-rules.yaml`
 pour contrôler le DNS, SNMP et le durcissement SSH :
@@ -130,6 +147,9 @@ Avec un rapport JSON ou SARIF par équipement, ajoutez `--report-format` et
 ### Validation automatique
 
 GitHub Actions exécute automatiquement le formatage, les tests, `go vet` et la compilation Linux/Windows sur chaque push et chaque Pull Request.
+Le workflow vérifie également la conformité SARIF et exécute le smoke test
+Docker/SSH. Voir [docs/VALIDATION.md](docs/VALIDATION.md) pour le protocole
+complet de validation locale et les preuves à conserver.
 
 ## English
 
@@ -137,7 +157,9 @@ ConfigGuard detects drift between the expected network configuration and the con
 
 ### Project status
 
-Early MVP. The CLI currently compares two configuration files in read-only mode.
+Version 0.2.2. ConfigGuard supports read-only local and SSH collection, YAML
+inventories, single-device and multi-device audits, compliance rules, drift
+detection, and JSON/SARIF reports.
 
 ### Requirements
 
@@ -164,9 +186,20 @@ A custom YAML file can replace these controls.
 JSON and SARIF reports are available for CI tools and GitHub Code Scanning.
 The project CI also runs a compliance check and keeps the SARIF report as a downloadable artifact.
 
-### Network lab
+### Docker/SSH laboratory
 
-An initial Containerlab topology is available in `lab/containerlab`. It uses Linux containers only and does not include proprietary network images.
+The reproducible laboratory in `lab/` uses Docker Compose and a Linux
+container running OpenSSH. It does not require proprietary network images:
+
+```powershell
+docker compose -f .\lab\docker-compose.yml up -d --build
+powershell -ExecutionPolicy Bypass -File .\lab\smoke-test.ps1
+docker compose -f .\lab\docker-compose.yml down
+```
+
+The smoke test verifies SSH key-based collection, a compliant audit, drift
+detection, and exit codes `0`, `3`, and `4`. Temporary keys and snapshots are
+removed automatically.
 
 For a remote machine, use an SSH private key and a verified `known_hosts` file:
 
@@ -229,3 +262,6 @@ For one JSON or SARIF report per device, add `--report-format` and
 ### Automated validation
 
 GitHub Actions automatically runs formatting checks, tests, `go vet`, and Linux/Windows builds on every push and Pull Request.
+It also runs the SARIF compliance check and the Docker/SSH smoke test. See
+[docs/VALIDATION.md](docs/VALIDATION.md) for the complete local validation
+procedure and evidence checklist.

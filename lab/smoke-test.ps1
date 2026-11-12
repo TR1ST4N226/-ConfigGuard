@@ -20,6 +20,25 @@ function Invoke-ExpectedExitCode {
     }
 }
 
+function Start-ComposeWithRetry {
+    param(
+        [string]$ComposeFile,
+        [int]$Attempts = 3
+    )
+
+    for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
+        & docker compose -f $ComposeFile up -d --build --force-recreate
+        if ($LASTEXITCODE -eq 0) {
+            return
+        }
+        if ($attempt -lt $Attempts) {
+            & docker compose -f $ComposeFile down
+            Start-Sleep -Seconds 5
+        }
+    }
+    throw "docker compose failed after $Attempts attempts"
+}
+
 try {
     New-Item -ItemType Directory -Path $tempDirectory | Out-Null
     $privateKey = Join-Path $tempDirectory "id_ed25519"
@@ -50,7 +69,7 @@ try {
     Copy-Item $publicKey $authorizedKeys
 
     $env:CONFIGGUARD_SSH_DIR = $tempDirectory
-    Invoke-ExpectedExitCode "docker" @("compose", "-f", $composeFile, "up", "-d", "--build", "--force-recreate")
+    Start-ComposeWithRetry $composeFile
     $composeStarted = $true
 
     $hostKeys = & docker exec configguard-network-device sh -c "cat /etc/ssh/ssh_host_*_key.pub"

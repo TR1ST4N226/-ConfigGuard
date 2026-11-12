@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/TR1ST4N226/ConfigGuard/internal/collector"
@@ -127,8 +128,10 @@ func runAudit(args []string) (auditResult, error) {
 
 	inventoryPath := flags.String("inventory", "", "path to a YAML inventory")
 	deviceName := flags.String("device", "", "device name from the inventory")
+	allDevices := flags.Bool("all", false, "audit every device in the inventory")
 	desiredPath := flags.String("desired", "", "path to the expected configuration")
 	outputPath := flags.String("output", "", "path for the collected snapshot")
+	outputDir := flags.String("output-dir", "", "directory for snapshots when using --all")
 	timeout := flags.Duration("timeout", 30*time.Second, "maximum collection time")
 	rulesPath := flags.String("rules", "", "path to a custom YAML rules file")
 	reportFormat := flags.String("report-format", "text", "report format: text, json or sarif")
@@ -136,8 +139,18 @@ func runAudit(args []string) (auditResult, error) {
 	if err := flags.Parse(args); err != nil {
 		return auditResult{}, err
 	}
-	if *inventoryPath == "" || *deviceName == "" || *desiredPath == "" || *outputPath == "" {
-		return auditResult{}, fmt.Errorf("--inventory, --device, --desired and --output are required")
+	if *inventoryPath == "" || *desiredPath == "" {
+		return auditResult{}, fmt.Errorf("--inventory and --desired are required")
+	}
+	if (*allDevices && *deviceName != "") || (!*allDevices && *deviceName == "") {
+		return auditResult{}, fmt.Errorf("use exactly one of --device or --all")
+	}
+	if *allDevices {
+		if *outputDir == "" || *outputPath != "" {
+			return auditResult{}, fmt.Errorf("--all requires --output-dir and cannot use --output")
+		}
+	} else if *outputPath == "" || *outputDir != "" {
+		return auditResult{}, fmt.Errorf("--device requires --output and cannot use --output-dir")
 	}
 	if *timeout <= 0 {
 		return auditResult{}, fmt.Errorf("--timeout must be greater than zero")
@@ -147,40 +160,9 @@ func runAudit(args []string) (auditResult, error) {
 	if err != nil {
 		return auditResult{}, err
 	}
-	device, err := inventory.Find(devices, *deviceName)
-	if err != nil {
-		return auditResult{}, err
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
-	defer cancel()
-
-	lines, err := collector.CollectFromSource(ctx, device.Source, device.SSH)
-	if err != nil {
-		return auditResult{}, fmt.Errorf("collect snapshot: %w", err)
-	}
-	if err := collector.Write(*outputPath, lines); err != nil {
-		return auditResult{}, fmt.Errorf("write snapshot: %w", err)
-	}
-
 	desired, err := config.ReadFile(*desiredPath)
 	if err != nil {
 		return auditResult{}, fmt.Errorf("read desired configuration: %w", err)
-	}
-	actual, err := config.ReadFile(*outputPath)
-	if err != nil {
-		return auditResult{}, fmt.Errorf("read snapshot: %w", err)
-	}
-
-	missing, unexpected := config.Compare(desired, actual)
-	drift := len(missing) > 0 || len(unexpected) > 0
-	if drift {
-		fmt.Println("DRIFT: configuration differs")
-		for _, line := range missing {
-			fmt.Printf("- %s\n", line)
-		}
-		for _, line := range unexpected {
-			fmt.Printf("+ %s\n", line)
-		}
 	}
 
 	configuredRules := rules.Default()
@@ -190,35 +172,93 @@ func runAudit(args []string) (auditResult, error) {
 			return auditResult{}, fmt.Errorf("load rules: %w", err)
 		}
 	}
-	failed := rules.Evaluate(actual, configuredRules)
 	if *reportFormat != "text" && *reportPath == "" {
 		return auditResult{}, fmt.Errorf("--report-output is required for %s reports", *reportFormat)
 	}
+	if *allDevices {
+		if err := os.MkdirAll(*outputDir, 0700); err != nil {
+			return auditResult{}, fmt.Errorf("create output directory: %w", err)
+		}
+		if *reportFormat != "text" {
+			if err := os.MkdirAll(*reportPath, 0700); err != nil {
+				return auditResult{}, fmt.Errorf("create report directory: %w", err)
+			}
+		}
+		var aggregate auditResult
+		for _, device := range devices {
+			result, err := auditDevice(device, desired, filepath.Join(*outputDir, device.Name+".conf"), *timeout, configuredRules, *reportFormat, *reportPath, true)
+			if err != nil {
+				return auditResult{}, fmt.Errorf("device %q: %w", device.Name, err)
+			}
+			aggregate.drift = aggregate.drift || result.drift
+			aggregate.nonCompliant = aggregate.nonCompliant || result.nonCompliant
+		}
+		return aggregate, nil
+	}
+	device, err := inventory.Find(devices, *deviceName)
+	if err != nil {
+		return auditResult{}, err
+	}
+	return auditDevice(device, desired, *outputPath, *timeout, configuredRules, *reportFormat, *reportPath, false)
+}
+
+func auditDevice(device inventory.Device, desired []string, outputPath string, timeout time.Duration, configuredRules []rules.Rule, reportFormat, reportPath string, multi bool) (auditResult, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	lines, err := collector.CollectFromSource(ctx, device.Source, device.SSH)
+	if err != nil {
+		return auditResult{}, fmt.Errorf("collect snapshot: %w", err)
+	}
+	if err := collector.Write(outputPath, lines); err != nil {
+		return auditResult{}, fmt.Errorf("write snapshot: %w", err)
+	}
+	actual, err := config.ReadFile(outputPath)
+	if err != nil {
+		return auditResult{}, fmt.Errorf("read snapshot: %w", err)
+	}
+	missing, unexpected := config.Compare(desired, actual)
+	drift := len(missing) > 0 || len(unexpected) > 0
+	if drift {
+		fmt.Printf("[%s] DRIFT: configuration differs\n", device.Name)
+		for _, line := range missing {
+			fmt.Printf("[%s] - %s\n", device.Name, line)
+		}
+		for _, line := range unexpected {
+			fmt.Printf("[%s] + %s\n", device.Name, line)
+		}
+	}
+	failed := rules.Evaluate(actual, configuredRules)
 	result := report.FromAudit(failed, missing, unexpected)
-	switch *reportFormat {
-	case "text":
-	case "json":
-		if err := report.WriteJSON(*reportPath, result); err != nil {
+	if reportFormat == "json" {
+		if err := report.WriteJSON(reportPathForDevice(reportPath, device.Name, multi, false), result); err != nil {
 			return auditResult{}, err
 		}
-	case "sarif":
-		if err := report.WriteSARIF(*reportPath, result); err != nil {
+	} else if reportFormat == "sarif" {
+		if err := report.WriteSARIF(reportPathForDevice(reportPath, device.Name, multi, true), result); err != nil {
 			return auditResult{}, err
 		}
-	default:
-		return auditResult{}, fmt.Errorf("unsupported report format %q", *reportFormat)
+	} else if reportFormat != "text" {
+		return auditResult{}, fmt.Errorf("unsupported report format %q", reportFormat)
 	}
 	if len(failed) > 0 {
-		fmt.Printf("NON-COMPLIANT: %d rule(s) failed\n", len(failed))
-		for _, rule := range failed {
-			fmt.Printf("- %s [%s] %s\n", rule.ID, rule.Severity, rule.Description)
-		}
+		fmt.Printf("[%s] NON-COMPLIANT: %d rule(s) failed\n", device.Name, len(failed))
 		return auditResult{drift: drift, nonCompliant: true}, nil
 	}
 	if !drift {
-		fmt.Println("COMPLIANT: audit passed")
+		fmt.Printf("[%s] COMPLIANT: audit passed\n", device.Name)
 	}
 	return auditResult{drift: drift}, nil
+}
+
+func reportPathForDevice(path, name string, multi, sarif bool) string {
+	if !multi {
+		return path
+	}
+	extension := ".json"
+	if sarif {
+		extension = ".sarif"
+	}
+	return filepath.Join(path, name+extension)
 }
 
 func runCheck(args []string) (bool, error) {
@@ -403,6 +443,7 @@ Usage:
   configguard version
   configguard list --inventory inventory.yaml
   configguard audit --inventory inventory.yaml --device switch-01 --desired expected.conf --output actual.conf
+  configguard audit --inventory inventory.yaml --all --desired expected.conf --output-dir snapshots
   configguard snapshot --output actual.conf
   configguard snapshot --inventory inventory.yaml --device switch-01 --output actual.conf
   configguard snapshot --source ssh --platform cisco-ios --ssh-host 192.0.2.10:22 --ssh-user admin --ssh-key .\id_ed25519 --ssh-known-hosts .\known_hosts --output actual.conf

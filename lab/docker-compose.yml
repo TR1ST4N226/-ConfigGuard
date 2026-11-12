@@ -2,6 +2,7 @@ services:
   configguard:
     build:
       context: ./containerlab
+      network: host
     image: configguard-lab:local
     container_name: configguard-lab
     volumes:
@@ -14,6 +15,7 @@ services:
   network-device:
     build:
       context: ./containerlab
+      network: host
     image: configguard-lab:local
     container_name: configguard-network-device
     ports:

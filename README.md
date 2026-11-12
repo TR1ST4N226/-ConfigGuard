@@ -106,6 +106,19 @@ go run . audit `
   --output .\examples\actual.conf
 ```
 
+Pour auditer tous les équipements de l'inventaire :
+
+```powershell
+go run . audit `
+  --inventory .\examples\inventory.yaml `
+  --all `
+  --desired .\examples\desired.conf `
+  --output-dir .\audit-output
+```
+
+Avec un rapport JSON ou SARIF par équipement, ajoutez `--report-format` et
+`--report-output` en indiquant un dossier de rapports.
+
 ### Codes de sortie
 
 - `0` : configuration conforme
@@ -191,6 +204,19 @@ go run . audit `
   --desired .\examples\desired.conf `
   --output .\examples\actual.conf
 ```
+
+To audit every device in the inventory:
+
+```powershell
+go run . audit `
+  --inventory .\examples\inventory.yaml `
+  --all `
+  --desired .\examples\desired.conf `
+  --output-dir .\audit-output
+```
+
+For one JSON or SARIF report per device, add `--report-format` and
+`--report-output` with a report directory.
 
 ### Exit codes
 

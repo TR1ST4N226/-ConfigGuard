@@ -42,7 +42,7 @@ go run . check --config .\examples\actual.conf --report-format sarif --report-ou
 
 Expected evidence:
 
-- the displayed version is `configguard 0.2.2`;
+- the displayed version is `configguard 0.3.0`;
 - the compliant check succeeds;
 - the drift example reports the changed lines;
 - the drift check returns exit code `4`, while the non-compliant rules check

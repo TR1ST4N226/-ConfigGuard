@@ -1,6 +1,18 @@
 package main
 
-import "testing"
+import (
+	"bytes"
+	"testing"
+)
+
+func TestPrintBannerWithoutAnimation(t *testing.T) {
+	var output bytes.Buffer
+	printBanner(&output, false)
+
+	if got, want := output.String(), banner+"\n"; got != want {
+		t.Fatalf("printBanner() = %q, want %q", got, want)
+	}
+}
 
 func TestAuditResultExitCode(t *testing.T) {
 	tests := []struct {

@@ -4,8 +4,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/TR1ST4N226/ConfigGuard/internal/collector"
@@ -15,7 +17,7 @@ import (
 	"github.com/TR1ST4N226/ConfigGuard/internal/rules"
 )
 
-const version = "0.2.2"
+const version = "0.3.0"
 
 const banner = `░██████                            ░████ ░██             ░██████                                        ░██ 
  ░██   ░██                          ░██                   ░██   ░██                                       ░██ 
@@ -45,14 +47,21 @@ func (r auditResult) exitCode() int {
 func main() {
 	// Garde le routage léger ; chaque commande possède son propre parsing.
 	// Keep command dispatch small; each command owns its argument parsing.
+	interactive := isTerminal(os.Stdout)
+	if interactive {
+		printBanner(os.Stdout, true)
+	}
+
 	if len(os.Args) < 2 {
-		printUsage()
+		printUsage(!interactive)
 		os.Exit(2)
 	}
 
 	switch os.Args[1] {
 	case "version":
-		fmt.Println(banner)
+		if !interactive {
+			printBanner(os.Stdout, false)
+		}
 		fmt.Printf("configguard %s\n", version)
 	case "snapshot":
 		if err := runSnapshot(os.Args[2:]); err != nil {
@@ -92,11 +101,38 @@ func main() {
 			os.Exit(3)
 		}
 	case "help", "-h", "--help":
-		printUsage()
+		printUsage(!interactive)
 	default:
 		fmt.Fprintf(os.Stderr, "configguard: unknown command %q\n\n", os.Args[1])
-		printUsage()
+		printUsage(!interactive)
 		os.Exit(2)
+	}
+}
+
+func isTerminal(file *os.File) bool {
+	info, err := file.Stat()
+	return err == nil && info.Mode()&os.ModeCharDevice != 0
+}
+
+func printBanner(out io.Writer, animate bool) {
+	if !animate {
+		fmt.Fprintln(out, banner)
+		return
+	}
+
+	const chunkSize = 12
+	const chunkDelay = 15 * time.Millisecond
+	for _, line := range strings.Split(banner, "\n") {
+		runes := []rune(line)
+		for start := 0; start < len(runes); start += chunkSize {
+			end := start + chunkSize
+			if end > len(runes) {
+				end = len(runes)
+			}
+			fmt.Fprint(out, string(runes[start:end]))
+			time.Sleep(chunkDelay)
+		}
+		fmt.Fprintln(out)
 	}
 }
 
@@ -435,8 +471,10 @@ func runDiff(args []string) (bool, error) {
 	return true, nil
 }
 
-func printUsage() {
-	fmt.Println(banner)
+func printUsage(showBanner bool) {
+	if showBanner {
+		printBanner(os.Stdout, false)
+	}
 	fmt.Println(`ConfigGuard detects drift between expected and current network configuration.
 
 Usage:

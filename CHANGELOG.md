@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0] - 2026-11-25
+
+### Added
+
+- Multi-device inventory audits with per-device snapshots and reports.
+- Interactive white ASCII banner animation in the CLI.
+- A complete validation runbook and screenshot evidence checklist.
+
+### Improved
+
+- Docker SSH smoke test retries transient image build failures.
+- CI validates Docker-based SSH collection and multi-platform builds.
+
 ## [0.2.2] - 2026-11-11
 
 ### Fixed
